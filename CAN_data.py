@@ -1,13 +1,15 @@
+#only CAN data code
 import can
 import time
 import binascii
 import sys
 import requests
 import datetime
+from openpyxl import Workbook
 from datetime import datetime, timedelta,timezone
-from PyQt5.QtWidgets import QMainWindow, QApplication
+from PyQt5.QtWidgets import QMainWindow, QApplication,QMessageBox
 from PyQt5.QtCore import QTimer
-from finalTesting import Ui_MainWindow
+from finalTesting import Ui_FinalTestingUtility
 import resources_rc
 
 # Expected CAN IDs and their frame counts
@@ -21,19 +23,22 @@ received_frames = {0x100: [],0x101 : [] , 0x103 :[],0x105 :[],0x106 :[] , 0x115 
 class MyClass(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.ui = Ui_MainWindow()
+        self.ui = Ui_FinalTestingUtility()
         self.ui.setupUi(self)
         self.stackedWidget = self.ui.stackedWidget
         self.bus = None
         self.busy = False
         self.ui.pushButton.clicked.connect(self.goToPage2)
-        self.ui.pushButton_3.clicked.connect(self.start_functions)
+        self.ui.pushButton_8.clicked.connect(self.start_functions)
+        self.ui.pushButton_2.clicked.connect(self.save_to_excel)
         self.initialize_can_bus()
         self.IMEI_ascii= None
         self.ICCID_ascii = None
         self.appln_ver = None
         self.GSM_ver = None
         self.Gps_ver = None
+        self.Int_vtg = None
+        self.mains_vtg = None
 
         # Initialize flags
         self.function100_done = False
@@ -113,13 +118,13 @@ class MyClass(QMainWindow):
                 try:
                   self.IMEI_ascii = IMEI.decode('ascii')  # Decode bytes into ASCII string
                   print(f"Extracted IMEI (ASCII): {self.IMEI_ascii}")
-                  self.ui.IMIE_input.setPlainText(self.IMEI_ascii)
-                  self.ui.plainTextEdit_4.appendPlainText(f"IMEI : {self.IMEI_ascii}\n")
+                  self.ui.plainTextEdit_10.setPlainText(self.IMEI_ascii)
+                  self.ui.plainTextEdit_12.appendPlainText(f"IMEI : {self.IMEI_ascii}\n")
 
                   if len(self.IMEI_ascii) < 15:
-                     self.ui.IMIE_input.setStyleSheet("background-color: red;")
+                     self.ui.plainTextEdit_10.setStyleSheet("background-color: red;")
                   else:
-                      self.ui.IMIE_input.setStyleSheet("background-color: white;")
+                      self.ui.plainTextEdit_10.setStyleSheet("background-color: white;")
                   
                 except UnicodeDecodeError:
                   print("Error decoding IMEI to ASCII. The data may contain non-ASCII characters.")
@@ -177,13 +182,13 @@ class MyClass(QMainWindow):
                 try:
                   self.ICCID_ascii = ICCID.decode('ascii')  # Decode bytes into ASCII string
                   print(f"Extracted IMEI (ASCII): {self.ICCID_ascii}")
-                  self.ui.ICCID_input.setPlainText(self.ICCID_ascii)
-                  self.ui.plainTextEdit_4.appendPlainText(f"ICCID : {self.ICCID_ascii}\n")
+                  self.ui.plainTextEdit_11.setPlainText(self.ICCID_ascii)
+                  self.ui.plainTextEdit_12.appendPlainText(f"ICCID : {self.ICCID_ascii}\n")
 
                   if len(self.ICCID_ascii)<20:
-                      self.ui.ICCID_input.setStyleSheet("background-color: red;")
+                      self.ui.plainTextEdit_11.setStyleSheet("background-color: red;")
                   else:
-                      self.ui.ICCID_input.setStyleSheet("background-color: white;")
+                      self.ui.plainTextEdit_11.setStyleSheet("background-color: white;")
                       
                 except UnicodeDecodeError:
                   print("Error decoding IMEI to ASCII. The data may contain non-ASCII characters.")
@@ -239,13 +244,13 @@ class MyClass(QMainWindow):
                   self.appln_ver = complete_message.decode('ascii')  # Decode bytes into ASCII string
                   print('appln ver ASCII :',self.appln_ver)
                   print(f"Application version: {self.appln_ver}")
-                  self.ui.IMIE_input_4.setPlainText(self.appln_ver)
-                  self.ui.plainTextEdit_4.appendPlainText(f"Application Version : {self.appln_ver}\n")
+                  self.ui.plainTextEdit_8.setPlainText(self.appln_ver)
+                  self.ui.plainTextEdit_12.appendPlainText(f"Application Version : {self.appln_ver}\n")
 
                   if self.appln_ver != 'SAM01_APP_0.0.6_TST06':
-                      self.ui.IMIE_input_4.setStyleSheet("background-color: red;")
+                      self.ui.plainTextEdit_8.setStyleSheet("background-color: red;")
                   else:
-                      self.ui.IMIE_input_4.setStyleSheet("background-color: white;")
+                      self.ui.plainTextEdit_8.setStyleSheet("background-color: white;")
                       
                 except UnicodeDecodeError:
                   print("Error decoding IMEI to ASCII. The data may contain non-ASCII characters.")
@@ -300,15 +305,15 @@ class MyClass(QMainWindow):
                 try:
                   self.Gps_ver = complete_message.decode('ascii')  # Decode bytes into ASCII string
                   print('GPS ver ASCII :',self.Gps_ver)
-                  self.ui.GPS_version.setPlainText(self.Gps_ver)
-                  self.ui.plainTextEdit_4.appendPlainText(f"GPS Version : {self.Gps_ver}\n")
+                  self.ui.plainTextEdit_5.setPlainText(self.Gps_ver)
+                  self.ui.plainTextEdit_12.appendPlainText(f"GPS Version : {self.Gps_ver}\n")
                   #gps_ver_cleaned = self.Gps_ver.strip()
                   print('gps strip',self.Gps_ver)
                   
                   if self.Gps_ver == 'L89HANR01A07S':
-                      self.ui.GPS_version.setStyleSheet("background-color: white;")
+                      self.ui.plainTextEdit_5.setStyleSheet("background-color: white;")
                   else:
-                      self.ui.GPS_version.setStyleSheet("background-color: red;")
+                      self.ui.plainTextEdit_5.setStyleSheet("background-color: red;")
                       
                 except UnicodeDecodeError:
                   print("Error decoding IMEI to ASCII. The data may contain non-ASCII characters.")
@@ -364,13 +369,13 @@ class MyClass(QMainWindow):
                 try:
                   self.GSM_ver = complete_message.decode('ascii')  # Decode bytes into ASCII string
                   print('GSM ver ASCII :',self.GSM_ver)
-                  self.ui.GSM_version.setPlainText(self.GSM_ver)
-                  self.ui.plainTextEdit_4.appendPlainText(f"GSM Version : {self.GSM_ver}\n")
+                  self.ui.plainTextEdit_6.setPlainText(self.GSM_ver)
+                  self.ui.plainTextEdit_12.appendPlainText(f"GSM Version : {self.GSM_ver}\n")
 
                   if self.GSM_ver != 'EC200UCNAAR03A03M08':
-                      self.ui.IMIE_input_4.setStyleSheet("background-color: red;")
+                      self.ui.plainTextEdit_6.setStyleSheet("background-color: red;")
                   else:
-                      self.ui.IMIE_input_4.setStyleSheet("background-color: white;")
+                      self.ui.plainTextEdit_6.setStyleSheet("background-color: white;")
                       
                 except UnicodeDecodeError:
                   print("Error decoding IMEI to ASCII. The data may contain non-ASCII characters.")
@@ -421,8 +426,8 @@ class MyClass(QMainWindow):
                 print('Mains vtg:', self.mains_vtg)
             
                 # Update the UI with the decoded message
-                self.ui.Analog1.setPlainText(self.mains_vtg)
-                self.ui.plainTextEdit_4.appendPlainText(f"Mains Voltage: {self.mains_vtg}\n")
+                self.ui.mains_input_2.setPlainText(self.mains_vtg)
+                self.ui.plainTextEdit_12.appendPlainText(f"Mains Voltage: {self.mains_vtg}\n")
             else:
                 # If no message is received within the timeout period
                 print(f"Timeout waiting for message for CAN ID 0x115. No response received.")
@@ -470,8 +475,8 @@ class MyClass(QMainWindow):
                 print('Internal vtg:', self.Int_vtg)
             
                 # Update the UI with the decoded message
-                self.ui.IntBat_input.setPlainText(self.Int_vtg)
-                self.ui.plainTextEdit_4.appendPlainText(f"Mains Voltage: {self.Int_vtg}\n")
+                self.ui.IntBat_input_2.setPlainText(self.Int_vtg)
+                self.ui.plainTextEdit_12.appendPlainText(f"Int_Bat Voltage: {self.Int_vtg}\n")
             else:
                 # If no message is received within the timeout period
                 print(f"Timeout waiting for message for CAN ID 0x116. No response received.")
@@ -487,54 +492,7 @@ class MyClass(QMainWindow):
             self.execute_next_function()
             print("Frames cleared for CAN ID 0x116")
 
-    def fun_0x116(self):
-        if self.busy:  # Check if the system is busy
-            print("System is busy, please wait...")
-            return
-
-        if self.bus is None:  # Check if the bus was initialized properly
-            print("CAN Bus not initialized. Cannot send message.")
-            return
-
-        self.busy = True  # Mark the system as busy
-
-        try:
-            # Create the CAN message
-            msg = can.Message(arbitration_id=0x116, data=[0, 0, 0, 0, 0, 0, 0, 0], is_extended_id=False)
-
-            # Send the message once
-            self.bus.send(msg)
-            print(f"Message sent on {self.bus.channel_info}")
-
-            # Wait for a response with a timeout (e.g., 2 seconds)
-            message = self.bus.recv(timeout=2)  # 2 seconds timeout for response
-
-            if message:
-                exttracted_IntVtg = message.data[1:]
-                # Process the received message
-                print(f"Received message from CAN ID {hex(message.arbitration_id)}: {message.data.hex()}")
-            
-                # Decode the received message and update the UI
-                self.Int_vtg = exttracted_IntVtg.decode('ascii')  # Decode bytes into ASCII string
-                print('Internal vtg:', self.Int_vtg)
-            
-                # Update the UI with the decoded message
-                self.ui.IntBat_input.setPlainText(self.Int_vtg)
-                self.ui.plainTextEdit_4.appendPlainText(f"Mains Voltage: {self.Int_vtg}\n")
-            else:
-                # If no message is received within the timeout period
-                print(f"Timeout waiting for message for CAN ID 0x116. No response received.")
-
-        except can.CanError as e:
-            print(f"CAN error: {str(e)}")
- 
-        finally:
-            self.busy = False  # Mark the system as not busy
-            received_frames[0x116].clear()
-            self.function116_done = True
-            time.sleep(2)
-            self.execute_next_function()
-            print("Frames cleared for CAN ID 0x116")
+    
 
 
     def execute_next_function(self):
@@ -578,11 +536,63 @@ class MyClass(QMainWindow):
     def goToPage2(self):
         self.stackedWidget.setCurrentIndex((self.stackedWidget.currentIndex()+1)%2)
 
+    def save_to_excel(self):
+        """Save all displayed data in the UI to an Excel file in the current working directory."""
+        
+        # Sanitize data before putting it into the Excel sheet
+        imei_cleaned = self.sanitize_data(self.IMEI_ascii)
+        iccid_cleaned = self.sanitize_data(self.ICCID_ascii)
+        appln_ver_cleaned = self.sanitize_data(self.appln_ver)
+        gsm_ver_cleaned = self.sanitize_data(self.GSM_ver)
+        gps_ver_cleaned = self.sanitize_data(self.Gps_ver)
+        mains_vtg_cleaned = self.sanitize_data(self.mains_vtg)
+        int_vtg_cleaned = self.sanitize_data(self.Int_vtg)
+
+        # Create a new workbook and select the active sheet
+        wb = Workbook()
+        ws = wb.active
+
+        # Set the headers for the columns
+        ws['A1'] = 'IMEI'
+        ws['B1'] = 'ICCID'
+        ws['C1'] = 'Application Version'
+        ws['D1'] = 'GSM Version'
+        ws['E1'] = 'GPS Version'
+        ws['F1'] = 'Mains vtg'
+        ws['G1'] = 'Int_Bat vtg'
+
+        # Insert data into the second row (after headers)
+        ws['A2'] = imei_cleaned
+        ws['B2'] = iccid_cleaned
+        ws['C2'] = appln_ver_cleaned
+        ws['D2'] = gsm_ver_cleaned
+        ws['E2'] = gps_ver_cleaned
+        ws['F2'] = mains_vtg_cleaned
+        ws['G2'] = int_vtg_cleaned
+
+        # Get the current working directory
+        current_directory = os.getcwd()
+
+        # Set the path for the Excel file
+        file_path = os.path.join(current_directory, "saved_data.xlsx")
+
+        try:
+            # Save the workbook to the specified path
+            wb.save(file_path)
+            print(f"Data saved to {file_path}")
+            QMessageBox.information(self, "Success", f"Data successfully saved to {file_path}")
+
+        except Exception as e:
+            print(f"Error saving data to Excel: {str(e)}")
+            QMessageBox.warning(self, "Error", f"Failed to save data to Excel: {str(e)}")
        
         
 
    
- 
+    
+
+   
+    
 
 # Entry point of the program
 if __name__ == "__main__":
